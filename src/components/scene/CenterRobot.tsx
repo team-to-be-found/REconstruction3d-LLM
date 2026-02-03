@@ -14,7 +14,6 @@ export default function CenterRobot() {
   const particles = useMemo(() => {
     const count = 200;
     const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
       const i3 = i * 3;
@@ -25,17 +24,10 @@ export default function CenterRobot() {
       positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
       positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
       positions[i3 + 2] = radius * Math.cos(phi);
-
-      // Cyan/Magenta 赛博朋克配色
-      const isCyan = Math.random() > 0.5;
-      colors[i3] = isCyan ? 0 : 1;      // R
-      colors[i3 + 1] = isCyan ? 1 : 0;  // G
-      colors[i3 + 2] = 1;                // B
     }
 
     const geometry = new BufferGeometry();
     geometry.setAttribute('position', new BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new BufferAttribute(colors, 3));
 
     return geometry;
   }, []);
@@ -189,6 +181,7 @@ export default function CenterRobot() {
       {/* ✨ 数据流粒子系统 */}
       <points ref={particlesRef} geometry={particles}>
         <pointsMaterial
+          color="#00FFFF"
           size={0.08}
           transparent
           opacity={0.8}
