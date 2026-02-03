@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, Circle, Box, Hexagon } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ChevronDown, Circle, Box, Hexagon, FileText, AlertCircle } from 'lucide-react';
 import GlassCard from './GlassCard';
+import { useKnowledgeStore } from '@/stores/useKnowledgeStore';
 
 interface NodeType {
   id: string;
@@ -18,32 +19,68 @@ interface NodeType {
  * 特点：可折叠分类、节点统计、过滤器
  */
 export default function LeftSidebar() {
-  const [nodeTypes, setNodeTypes] = useState<NodeType[]>([
+  const { nodes, enabledNodeTypes, toggleNodeType } = useKnowledgeStore();
+
+  // 计算每种节点类型的数量
+  const nodeTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      skill: 0,
+      plugin: 0,
+      mcp: 0,
+      document: 0,
+      error: 0,
+    };
+    nodes.forEach((node) => {
+      if (counts[node.type] !== undefined) {
+        counts[node.type]++;
+      }
+    });
+    return counts;
+  }, [nodes]);
+
+  // 节点类型配置
+  const nodeTypes: NodeType[] = [
     {
       id: 'skill',
       label: 'Skills',
       color: '#00FFFF',
       icon: <Hexagon className="w-4 h-4" />,
-      count: 24,
-      enabled: true,
+      count: nodeTypeCounts.skill,
+      enabled: enabledNodeTypes.has('skill'),
     },
     {
       id: 'plugin',
       label: 'Plugins',
       color: '#FF00FF',
       icon: <Box className="w-4 h-4" />,
-      count: 18,
-      enabled: true,
+      count: nodeTypeCounts.plugin,
+      enabled: enabledNodeTypes.has('plugin'),
     },
     {
       id: 'mcp',
       label: 'MCPs',
       color: '#FFFF00',
       icon: <Circle className="w-4 h-4" />,
-      count: 12,
-      enabled: true,
+      count: nodeTypeCounts.mcp,
+      enabled: enabledNodeTypes.has('mcp'),
     },
-  ]);
+    {
+      id: 'document',
+      label: '文档',
+      color: '#10B981',
+      icon: <FileText className="w-4 h-4" />,
+      count: nodeTypeCounts.document,
+      enabled: enabledNodeTypes.has('document'),
+    },
+    {
+      id: 'error',
+      label: '错误',
+      color: '#EF4444',
+      icon: <AlertCircle className="w-4 h-4" />,
+      count: nodeTypeCounts.error,
+      enabled: enabledNodeTypes.has('error'),
+    },
+  ];
 
   const [categories, setCategories] = useState([
     { id: 'backend', label: '后端开发', expanded: true },
@@ -51,14 +88,6 @@ export default function LeftSidebar() {
     { id: 'devops', label: 'DevOps', expanded: false },
     { id: 'security', label: '安全', expanded: false },
   ]);
-
-  const toggleNodeType = (id: string) => {
-    setNodeTypes((prev) =>
-      prev.map((type) =>
-        type.id === id ? { ...type, enabled: !type.enabled } : type
-      )
-    );
-  };
 
   const toggleCategory = (id: string) => {
     setCategories((prev) =>

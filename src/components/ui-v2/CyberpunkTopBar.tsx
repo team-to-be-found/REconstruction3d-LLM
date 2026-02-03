@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { Search, Settings, User, Grid3x3, Layers, Filter } from 'lucide-react';
 import NeonButton from './NeonButton';
+import { useKnowledgeStore } from '@/stores/useKnowledgeStore';
 
 /**
  * 赛博朋克风格顶部导航栏
  * 特点：玻璃态背景、搜索栏、过滤器、视图切换
  */
 export default function CyberpunkTopBar() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const { searchQuery, setSearchQuery } = useKnowledgeStore();
   const [viewMode, setViewMode] = useState<'2D' | '3D' | 'VR'>('3D');
 
   return (

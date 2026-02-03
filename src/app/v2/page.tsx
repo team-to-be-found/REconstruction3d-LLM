@@ -3,6 +3,8 @@
 import dynamic from 'next/dynamic';
 import CyberpunkTopBar from '@/components/ui-v2/CyberpunkTopBar';
 import LeftSidebar from '@/components/ui-v2/LeftSidebar';
+import RightInfoPanel from '@/components/ui-v2/RightInfoPanel';
+import BottomToolbar from '@/components/ui-v2/BottomToolbar';
 
 // 动态导入 3D 场景组件（避免 SSR 问题）
 const Scene3D = dynamic(() => import('@/components/scene/Scene'), { ssr: false });
@@ -51,6 +53,9 @@ export default function V2HomePage() {
 
       {/* 左侧边栏 */}
       <LeftSidebar />
+
+      {/* 右侧信息面板 */}
+      <RightInfoPanel />
 
       {/* 主要内容区域 - 3D Canvas */}
       <main
@@ -154,110 +159,7 @@ export default function V2HomePage() {
       </main>
 
       {/* 底部工具栏 */}
-      <footer
-        className="
-          fixed
-          left-60
-          right-0
-          bottom-0
-          h-12
-          bg-[rgba(10,14,39,0.7)]
-          backdrop-blur-md
-          border-t
-          border-cyan-500/20
-          flex
-          items-center
-          justify-between
-          px-4
-          z-40
-        "
-      >
-        {/* 左侧：缩放控制 */}
-        <div className="flex items-center gap-4">
-          <button
-            className="
-              px-3
-              py-1
-              text-xs
-              text-cyan-400
-              border
-              border-cyan-500/50
-              rounded
-              hover:bg-cyan-500/20
-              hover:shadow-[0_0_10px_rgba(0,255,255,0.5)]
-              transition-all
-            "
-          >
-            重置视图
-          </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              className="
-                w-6
-                h-6
-                flex
-                items-center
-                justify-center
-                text-cyan-400
-                border
-                border-cyan-500/50
-                rounded
-                hover:bg-cyan-500/20
-                transition-all
-              "
-            >
-              -
-            </button>
-            <span className="text-xs text-white/70 font-mono w-12 text-center">
-              100%
-            </span>
-            <button
-              className="
-                w-6
-                h-6
-                flex
-                items-center
-                justify-center
-                text-cyan-400
-                border
-                border-cyan-500/50
-                rounded
-                hover:bg-cyan-500/20
-                transition-all
-              "
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        {/* 中间：状态信息 */}
-        <div className="flex items-center gap-6 text-xs text-white/50">
-          <span>相机位置: (0, 5, 15)</span>
-          <span className="w-px h-4 bg-white/20" />
-          <span>选中节点: 无</span>
-        </div>
-
-        {/* 右侧：小地图（占位） */}
-        <div
-          className="
-            w-32
-            h-8
-            bg-[rgba(0,255,255,0.05)]
-            border
-            border-cyan-500/30
-            rounded
-            flex
-            items-center
-            justify-center
-            text-xs
-            text-cyan-400/50
-          "
-        >
-          小地图
-        </div>
-      </footer>
+      <BottomToolbar />
 
       {/* 扫描线全局效果 */}
       <div
