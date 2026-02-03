@@ -5,14 +5,17 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "npm run clean && npm run dev",
     "dev:electron": "concurrently \"npm run dev:next\" \"npm run dev:electron-start\"",
     "dev:next": "next dev",
     "dev:electron-start": "wait-on http://localhost:3000 && electron .",
+    "start:dev": "bash start-dev.sh",
     "build": "npm run build:next && npm run build:electron",
     "build:next": "next build",
     "build:electron": "tsc -p tsconfig.electron.json",
     "start": "electron .",
     "clean": "rimraf .next node_modules/.cache",
+    "kill-ports": "npx kill-port 3000 3001 3002",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
   },
