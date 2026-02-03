@@ -51,7 +51,7 @@ export default function TopBar() {
   ];
 
   return (
-    <div className="h-16 bg-black/95 backdrop-blur-md border-b border-cyan-500/30 flex items-center px-6 gap-4 z-10 relative overflow-hidden">
+    <div className="h-16 bg-black/95 backdrop-blur-md border-b border-cyan-500/30 flex items-center px-6 gap-4 relative overflow-hidden" style={{ zIndex: 1000 }}>
       {/* Cyberpunk 扫描线 */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent animate-pulse" />
 

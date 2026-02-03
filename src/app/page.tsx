@@ -12,8 +12,10 @@ import NodeDetailPanel from '@/components/ui/NodeDetailPanel';
 export default function Home() {
   return (
     <main className="w-full h-full flex flex-col relative overflow-hidden">
-      {/* Top Bar */}
-      <TopBar />
+      {/* Top Bar - 固定在顶部，高优先级 */}
+      <div className="relative" style={{ zIndex: 1000 }}>
+        <TopBar />
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex relative">

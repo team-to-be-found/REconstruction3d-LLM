@@ -146,7 +146,6 @@ export function computeForceDirectedLayout(
   // 创建 D3 图数据结构
   const graph = {
     nodes: nodesCopy.map((n) => ({
-      id: n.id,
       ...n,
       x: n.position[0] || Math.random() * 20 - 10,
       y: n.position[1] || Math.random() * 20 - 10,

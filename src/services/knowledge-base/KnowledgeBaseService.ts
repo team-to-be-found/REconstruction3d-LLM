@@ -40,6 +40,11 @@ export class KnowledgeBaseService {
   private async scanDirectory(dirPath: string): Promise<string[]> {
     const files: string[] = [];
 
+    if (!window.electron) {
+      console.warn('Electron API not available');
+      return files;
+    }
+
     try {
       const entries = await window.electron.fs.readDirectory(dirPath);
 
@@ -62,6 +67,11 @@ export class KnowledgeBaseService {
   }
 
   private async loadMarkdownFile(filePath: string): Promise<void> {
+    if (!window.electron) {
+      console.warn('Electron API not available');
+      return;
+    }
+
     try {
       const content = await window.electron.fs.readFile(filePath);
       const { data: frontmatter, content: markdown } = matter(content);
@@ -133,7 +143,7 @@ export class KnowledgeBaseService {
       if (Array.isArray(frontmatter.tags)) {
         tags.push(...frontmatter.tags);
       } else if (typeof frontmatter.tags === 'string') {
-        tags.push(...frontmatter.tags.split(',').map((t) => t.trim()));
+        tags.push(...frontmatter.tags.split(',').map((t: string) => t.trim()));
       }
     }
 
@@ -317,7 +327,7 @@ export class KnowledgeBaseService {
   async watchDirectory(dirPath: string, callback: () => void): Promise<void> {
     if (!window.electron) return;
 
-    window.electron.fs.onFileChanged((data) => {
+    window.electron.fs.onFileChanged((data: any) => {
       console.log('File changed:', data);
       // 重新加载知识库
       this.loadKnowledgeBase().then(callback);

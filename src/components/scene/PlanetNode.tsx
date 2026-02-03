@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
-import { Mesh, Group } from 'three';
+import { useRef, useEffect, useState, useMemo } from 'react';
+import { Mesh, Group, Points, BufferGeometry, BufferAttribute, AdditiveBlending } from 'three';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
@@ -16,6 +16,8 @@ interface PlanetNodeProps {
 export default function PlanetNode({ node }: PlanetNodeProps) {
   const groupRef = useRef<Group>(null);
   const planetRef = useRef<Mesh>(null);
+  const glowRingRef = useRef<Mesh>(null);
+  const particlesRef = useRef<Points>(null);
   const { selectedNode, setSelectedNode, hoveredNode, setHoveredNode } = useKnowledgeStore();
 
   const isSelected = selectedNode?.id === node.id;
@@ -25,28 +27,44 @@ export default function PlanetNode({ node }: PlanetNodeProps) {
   // 🎨 获取语义颜色
   const colorScheme = getColorByType(node.type);
 
-  // 📏 根据轨道和类型决定尺寸（调整为更小，更合理）
+  // 📏 根据轨道和类型决定尺寸
   const getSize = () => {
-    // Category 节点（第一轨道）最大
-    if (node.type === 'category') {
-      return 1.8;
-    }
-    // Skill 和 MCP（第二轨道）中等
-    if (node.type === 'skill' || node.type === 'mcp') {
-      return 1.2;
-    }
-    // Plugin 和其他（第三轨道）小
+    if (node.type === 'category') return 1.8;
+    if (node.type === 'skill' || node.type === 'mcp') return 1.2;
     return 0.8;
   };
 
   const planetSize = getSize();
+
+  // 🌌 创建节点周围的数据粒子
+  const particles = useMemo(() => {
+    if (node.type === 'category') return null; // Category 节点不需要粒子
+
+    const count = 30;
+    const positions = new Float32Array(count * 3);
+
+    for (let i = 0; i < count; i++) {
+      const i3 = i * 3;
+      const radius = planetSize + 0.5 + Math.random() * 0.5;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI;
+
+      positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+      positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+      positions[i3 + 2] = radius * Math.cos(phi);
+    }
+
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(positions, 3));
+    return geometry;
+  }, [node.type, planetSize]);
 
   // 🎭 Hover 状态管理
   const [hoverScale, setHoverScale] = useState(1);
 
   useEffect(() => {
     if (isHovered) {
-      setHoverScale(1.15); // Hover 时放大 15%
+      setHoverScale(1.15);
     } else {
       setHoverScale(1);
     }
@@ -71,12 +89,32 @@ export default function PlanetNode({ node }: PlanetNodeProps) {
     document.body.style.cursor = 'auto';
   };
 
-  // 🌊 极轻微悬浮动画（振幅减小，更稳重像星球）
+  // 🎬 动画循环
   useFrame((state) => {
+    const time = state.clock.elapsedTime;
+
+    // 极轻微悬浮
     if (groupRef.current && !isSelected) {
-      // 极轻微的浮动，避免"气球感"
       groupRef.current.position.y =
-        node.position[1] + Math.sin(state.clock.elapsedTime * 0.5 + node.position[0]) * 0.05;
+        node.position[1] + Math.sin(time * 0.5 + node.position[0]) * 0.05;
+    }
+
+    // 霓虹环旋转
+    if (glowRingRef.current && (isHovered || isSelected)) {
+      glowRingRef.current.rotation.z = time * 0.5;
+    }
+
+    // 粒子环绕
+    if (particlesRef.current && (isHovered || isSelected)) {
+      const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
+      for (let i = 0; i < positions.length; i += 3) {
+        const angle = time * 0.3 + i * 0.1;
+        const radius = planetSize + 0.5 + Math.sin(time + i * 0.1) * 0.2;
+        positions[i] = Math.cos(angle) * radius;
+        positions[i + 1] = Math.sin(angle) * radius;
+        positions[i + 2] = Math.sin(time * 0.5 + i * 0.05) * 0.5;
+      }
+      particlesRef.current.geometry.attributes.position.needsUpdate = true;
     }
   });
 
@@ -94,30 +132,70 @@ export default function PlanetNode({ node }: PlanetNodeProps) {
           }
         }
       }
-
-      if (groupRef.current) {
-        groupRef.current.traverse((child: any) => {
-          if (child.geometry) child.geometry.dispose();
-          if (child.material) {
-            if (Array.isArray(child.material)) {
-              child.material.forEach((material: any) => material.dispose());
-            } else {
-              child.material.dispose();
-            }
-          }
-        });
-      }
     };
   }, []);
 
-  // 🎨 决定几何体（不同层级不同形状）
+  // 🎨 决定几何体
   const getGeometry = () => {
     if (node.type === 'category') {
-      // Category 使用八面体（更有层次感）
-      return <octahedronGeometry args={[planetSize, 0]} />;
+      // Category 使用八面体框架
+      return (
+        <>
+          {/* 外框线 */}
+          <mesh>
+            <octahedronGeometry args={[planetSize, 0]} />
+            <meshBasicMaterial
+              color={colorScheme.primary}
+              wireframe
+              transparent
+              opacity={0.6}
+            />
+          </mesh>
+          {/* 内核心 */}
+          <mesh>
+            <octahedronGeometry args={[planetSize * 0.6, 0]} />
+            <meshStandardMaterial
+              color={colorScheme.primary}
+              emissive={colorScheme.glow}
+              emissiveIntensity={1.5}
+              transparent
+              opacity={0.8}
+            />
+          </mesh>
+        </>
+      );
     }
-    // 其他使用球体
-    return <sphereGeometry args={[planetSize, 32, 32]} />;
+
+    // 其他类型：球体 + 霓虹效果
+    return (
+      <>
+        {/* 半透明外壳 */}
+        <mesh castShadow receiveShadow>
+          <sphereGeometry args={[planetSize, 32, 32]} />
+          <meshStandardMaterial
+            color={colorScheme.primary}
+            roughness={0.3}
+            metalness={0.7}
+            transparent
+            opacity={isDimmed ? 0.3 : 0.7}
+            emissive={colorScheme.glow}
+            emissiveIntensity={isHovered ? 0.8 : 0.4}
+          />
+        </mesh>
+
+        {/* 内部发光核心 */}
+        <mesh>
+          <sphereGeometry args={[planetSize * 0.7, 32, 32]} />
+          <meshStandardMaterial
+            color={colorScheme.glow}
+            emissive={colorScheme.glow}
+            emissiveIntensity={2}
+            transparent
+            opacity={0.6}
+          />
+        </mesh>
+      </>
+    );
   };
 
   return (
@@ -129,90 +207,116 @@ export default function PlanetNode({ node }: PlanetNodeProps) {
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}
     >
-      {/* 星球本体：使用 meshStandardMaterial + 语义颜色 */}
-      <mesh ref={planetRef} castShadow receiveShadow>
+      {/* 星球本体 */}
+      <group ref={planetRef}>
         {getGeometry()}
-        <meshStandardMaterial
-          color={colorScheme.primary}
-          roughness={0.6}                // 更粗糙，像真实星球表面
-          metalness={0.2}                // 轻微金属感，增加质感
-          transparent={isDimmed}         // 只在 dim 时透明
-          opacity={isDimmed ? 0.3 : 1.0} // 正常状态完全不透明
-          emissive={colorScheme.glow}    // 自发光（弱）
-          emissiveIntensity={isHovered ? 0.3 : 0.15} // Hover 时增强 glow（降低强度）
-        />
-      </mesh>
+      </group>
 
-      {/* 大气层 - 发光外壳（极克制，避免气球感） */}
-      {!isDimmed && (isSelected || isHovered) && (
-        <mesh>
-          <sphereGeometry args={[planetSize * 1.1, 24, 24]} />
+      {/* 霓虹边缘环 - 只在 Hover/Selected 时显示 */}
+      {(isHovered || isSelected) && (
+        <mesh ref={glowRingRef} rotation={[0, 0, 0]}>
+          <torusGeometry args={[planetSize * 1.2, 0.05, 16, 100]} />
           <meshBasicMaterial
-            color={colorScheme.glow}
+            color={node.type === 'category' ? '#00FFFF' : colorScheme.glow}
             transparent
-            opacity={isSelected ? 0.15 : 0.1}
-            side={THREE.BackSide}
+            opacity={0.8}
           />
         </mesh>
       )}
 
-      {/* 选中效果 - HUD 圆环 */}
+      {/* 选中效果 - 双重圆环 + 扫描线 */}
       {isSelected && (
         <>
-          {/* 水平圆环 */}
+          {/* 外环 - Cyan */}
           <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[planetSize * 1.3, 0.08, 16, 32]} />
+            <torusGeometry args={[planetSize * 1.4, 0.08, 16, 64]} />
             <meshBasicMaterial
-              color={colorScheme.secondary}
+              color="#00FFFF"
+              emissive="#00FFFF"
+              emissiveIntensity={1.5}
+              transparent
+              opacity={0.9}
+            />
+          </mesh>
+
+          {/* 内环 - Magenta */}
+          <mesh rotation={[0, Math.PI / 4, 0]}>
+            <torusGeometry args={[planetSize * 1.3, 0.06, 16, 64]} />
+            <meshBasicMaterial
+              color="#FF00FF"
+              emissive="#FF00FF"
+              emissiveIntensity={1.2}
               transparent
               opacity={0.8}
             />
           </mesh>
 
-          {/* 垂直圆环 */}
-          <mesh rotation={[0, 0, 0]}>
-            <torusGeometry args={[planetSize * 1.3, 0.08, 16, 32]} />
-            <meshBasicMaterial
-              color={colorScheme.secondary}
-              transparent
-              opacity={0.6}
-            />
-          </mesh>
+          {/* 4个角标 */}
+          {[0, 1, 2, 3].map((i) => {
+            const angle = (i / 4) * Math.PI * 2;
+            const radius = planetSize * 1.6;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            return (
+              <mesh key={i} position={[x, 0, z]}>
+                <boxGeometry args={[0.15, 0.15, 0.15]} />
+                <meshBasicMaterial
+                  color="#FFFF00"
+                  emissive="#FFFF00"
+                  emissiveIntensity={2}
+                />
+              </mesh>
+            );
+          })}
         </>
       )}
 
-      {/* 文字标签 - 只在 Hover 或 Selected 时显示（最多 2 行） */}
+      {/* 数据粒子流 - Hover/Selected 时显示 */}
+      {particles && (isHovered || isSelected) && (
+        <points ref={particlesRef} geometry={particles}>
+          <pointsMaterial
+            size={0.05}
+            color={colorScheme.glow}
+            transparent
+            opacity={0.7}
+            blending={AdditiveBlending}
+            sizeAttenuation
+          />
+        </points>
+      )}
+
+      {/* 文字标签 - Cyberpunk 风格 */}
       {(isHovered || isSelected) && (
         <Text
           position={[0, planetSize + 1.2, 0]}
           fontSize={0.6}
-          color={colorScheme.glow}
+          color={node.type === 'category' ? '#00FFFF' : colorScheme.glow}
           anchorX="center"
           anchorY="bottom"
           font="/fonts/Orbitron-Bold.ttf"
-          outlineWidth={0.05}
+          outlineWidth={0.08}
           outlineColor="#000000"
           maxWidth={8}
           textAlign="center"
-          // 限制为 2 行
-          text={
-            node.title.length > 30
-              ? node.title.substring(0, 30) + '...'
-              : node.title
-          }
-        />
+        >
+          {node.title.length > 30
+            ? node.title.substring(0, 30) + '...'
+            : node.title}
+        </Text>
       )}
 
-      {/* 轨道编号指示器（调试用，可选） */}
-      {process.env.NODE_ENV === 'development' && isHovered && node.orbit && (
+      {/* 类型标签 - 小字 */}
+      {isSelected && (
         <Text
-          position={[0, -planetSize - 0.8, 0]}
-          fontSize={0.4}
-          color="#666666"
+          position={[0, planetSize + 0.6, 0]}
+          fontSize={0.3}
+          color="#00D9FF"
           anchorX="center"
-          anchorY="top"
+          anchorY="bottom"
+          outlineWidth={0.05}
+          outlineColor="#000000"
         >
-          Orbit {node.orbit}
+          [{node.type.toUpperCase()}]
         </Text>
       )}
     </group>
